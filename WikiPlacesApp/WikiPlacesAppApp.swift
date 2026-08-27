@@ -9,9 +9,15 @@ import SwiftUI
 
 @main
 struct WikiPlacesAppApp: App {
+    @StateObject private var locationListViewModel: LocationsListViewModel
+
+    init() {
+        _locationListViewModel = StateObject(wrappedValue: DependencyInjector().makeLocationsViewModel())
+    }
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(locationListViewModel: locationListViewModel)
         }
     }
 }
