@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct LocationsListView: View {
-    @ObservedObject var viewModel: LocationListViewModel
+    @ObservedObject var viewModel: LocationsListViewModel
     var body: some View {
         ScrollView {
             ListContentView(viewModel: viewModel)
@@ -17,9 +17,6 @@ struct LocationsListView: View {
                 .padding(.bottom, 24)
         }
         .background(BackgroundGradient())
-        .refreshable {
-            await viewModel.refresh()
-        }
         .task {
             await viewModel.loadIfNeeded()
         }
@@ -27,7 +24,8 @@ struct LocationsListView: View {
 }
 
 #Preview {
-    LocationsListView(viewModel: LocationListViewModel(
-        fetchLocations: LocationServiceImp(networkService: NetworkService())
+    LocationsListView(viewModel: LocationsListViewModel(
+        locationService: LocationServiceImp(networkService: NetworkService()),
+        wikiOpener: wikipediaOpener(wikipediaDeeplink: WikipediaDeepLink())
     ))
 }

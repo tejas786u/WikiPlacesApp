@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var locationListViewModel = LocationListViewModel()
+    @ObservedObject var locationListViewModel: LocationsListViewModel
     @State private var isShowingCustomLocationSheet = false
     
     var body: some View {
@@ -30,9 +30,14 @@ struct ContentView: View {
         .sheet(isPresented: $isShowingCustomLocationSheet) {
             //Custome Location popup implementation will be here.
         }
+        .alert("Wikipedia App Not Found", isPresented: $locationListViewModel.isShowingNotInstalledAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Install the modified Wikipedia app to open locations there.")
+        }
     }
 }
 
 #Preview {
-    ContentView()
+    ContentView(locationListViewModel: DependencyInjector().makeLocationsViewModel())
 }

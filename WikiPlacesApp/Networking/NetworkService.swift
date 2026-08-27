@@ -26,7 +26,9 @@ struct NetworkService: NetworkServiceProtocol {
     }
     
     func fetch<T>(from url: URL) async throws -> T where T : Decodable {
-        let (data, response) = try await session.data(from: url)
+        var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw NetworkError.invalidResponse
         }

@@ -8,7 +8,8 @@
 import SwiftUI
 
 struct ListContentView: View {
-    @ObservedObject var viewModel: LocationListViewModel
+    @ObservedObject var viewModel: LocationsListViewModel
+    
     var body: some View {
         switch viewModel.state {
         case .idle, .loading:
@@ -29,7 +30,9 @@ struct ListContentView: View {
             LazyVStack(spacing: 14) {
                 ForEach(Array(locations.enumerated()), id: \.element.id) { index, location in
                     LocationCard(location: location) {
-                        //Launcher app code will be here
+                        Task {
+                            await viewModel.open(location: location)
+                        }
                     }
                     .transition(
                         .asymmetric(
@@ -55,7 +58,8 @@ struct ListContentView: View {
 }
 
 #Preview {
-    LocationsListView(viewModel: LocationListViewModel(
-        fetchLocations: LocationServiceImp(networkService: NetworkService())
+    LocationsListView(viewModel: LocationsListViewModel(
+        locationService: LocationServiceImp(networkService: NetworkService()),
+        wikiOpener: wikipediaOpener(wikipediaDeeplink: WikipediaDeepLink())
     ))
 }
