@@ -28,7 +28,7 @@ struct ContentView: View {
                 }
         }
         .sheet(isPresented: $isShowingCustomLocationSheet) {
-            //Custome Location popup implementation will be here.
+            CustomLocationView(launcher: locationListViewModel)
         }
         .alert("Wikipedia App Not Found", isPresented: $locationListViewModel.isShowingNotInstalledAlert) {
             Button("OK", role: .cancel) {}

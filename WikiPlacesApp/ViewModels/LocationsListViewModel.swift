@@ -21,10 +21,9 @@ class LocationsListViewModel: ObservableObject {
     @Published var isShowingNotInstalledAlert = false
 
     private let locationService: LocationRepositoryProtocol
-    private let wikiOpener: wikipediaOpener
-    
+    private let wikiOpener: DeepLinkOpenerProtocol
 
-    init(locationService: LocationRepositoryProtocol, wikiOpener: wikipediaOpener) {
+    init(locationService: LocationRepositoryProtocol, wikiOpener: DeepLinkOpenerProtocol) {
         self.locationService = locationService
         self.wikiOpener = wikiOpener
     }

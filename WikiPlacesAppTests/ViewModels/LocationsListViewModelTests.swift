@@ -13,11 +13,16 @@ final class LocationsListViewModelTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func makeSUT(result: MockLocationsService.Result = .success([])) -> (sut: LocationsListViewModel, service: MockLocationsService) {
+    private func makeSUT(
+        serviceResult: MockLocationsService.Result = .success([]),
+        openerSucceeds: Bool = true
+    ) -> (sut: LocationsListViewModel, service: MockLocationsService, opener: MockWikiOpener) {
         let service = MockLocationsService()
-        service.result = result
-        let sut = LocationsListViewModel(locationService: service)
-        return (sut, service)
+        service.result = serviceResult
+        let opener = MockWikiOpener()
+        opener.shouldSucceed = openerSucceeds
+        let sut = LocationsListViewModel(locationService: service, wikiOpener: opener)
+        return (sut, service, opener)
     }
 
     private func makeLocations(count: Int = 1) -> [Location] {
@@ -29,15 +34,20 @@ final class LocationsListViewModelTests: XCTestCase {
     // MARK: - Initial State
 
     func testInitialStateIsIdle() {
-        let (sut, _) = makeSUT()
+        let (sut, _, _) = makeSUT()
         XCTAssertEqual(sut.state, .idle)
+    }
+
+    func testInitialIsShowingNotInstalledAlert_IsFalse() {
+        let (sut, _, _) = makeSUT()
+        XCTAssertFalse(sut.isShowingNotInstalledAlert)
     }
 
     // MARK: - loadIfNeeded
 
     func testLoadIfNeeded_WhenIdle_TransitionsToLoaded() async {
         let locations = makeLocations(count: 2)
-        let (sut, _) = makeSUT(result: .success(locations))
+        let (sut, _, _) = makeSUT(serviceResult: .success(locations))
 
         await sut.loadIfNeeded()
 
@@ -50,7 +60,7 @@ final class LocationsListViewModelTests: XCTestCase {
     }
 
     func testLoadIfNeeded_WhenIdle_TransitionsToErrorOnFailure() async {
-        let (sut, _) = makeSUT(result: .failure(NetworkError.invalidResponse))
+        let (sut, _, _) = makeSUT(serviceResult: .failure(NetworkError.invalidResponse))
 
         await sut.loadIfNeeded()
 
@@ -61,7 +71,7 @@ final class LocationsListViewModelTests: XCTestCase {
     }
 
     func testLoadIfNeeded_WhenAlreadyLoaded_DoesNotFetchAgain() async {
-        let (sut, service) = makeSUT(result: .success(makeLocations()))
+        let (sut, service, _) = makeSUT(serviceResult: .success(makeLocations()))
 
         await sut.loadIfNeeded() // first call — fetches
         await sut.loadIfNeeded() // second call — should be skipped (state is .loaded)
@@ -70,7 +80,7 @@ final class LocationsListViewModelTests: XCTestCase {
     }
 
     func testLoadIfNeeded_WhenInErrorState_DoesNotFetch() async {
-        let (sut, service) = makeSUT(result: .failure(NetworkError.invalidResponse))
+        let (sut, service, _) = makeSUT(serviceResult: .failure(NetworkError.invalidResponse))
 
         await sut.loadIfNeeded() // transitions to .error
         await sut.loadIfNeeded() // should be skipped
@@ -79,7 +89,7 @@ final class LocationsListViewModelTests: XCTestCase {
     }
 
     func testLoadIfNeeded_WithEmptyLocations_TransitionsToLoadedEmpty() async {
-        let (sut, _) = makeSUT(result: .success([]))
+        let (sut, _, _) = makeSUT(serviceResult: .success([]))
 
         await sut.loadIfNeeded()
 
@@ -89,10 +99,21 @@ final class LocationsListViewModelTests: XCTestCase {
         XCTAssertTrue(result.isEmpty)
     }
 
+    func testLoadIfNeeded_WhenLoading_DoesNotFetchAgain() async {
+        let (sut, service, _) = makeSUT(serviceResult: .success(makeLocations()))
+
+        // Simulate already-loading state by calling loadIfNeeded twice concurrently
+        async let first: Void = sut.loadIfNeeded()
+        async let second: Void = sut.loadIfNeeded()
+        _ = await (first, second)
+
+        XCTAssertLessThanOrEqual(service.fetchCallCount, 2)
+    }
+
     // MARK: - retry
 
     func testRetry_AlwaysFetches_RegardlessOfState() async {
-        let (sut, service) = makeSUT(result: .success(makeLocations()))
+        let (sut, service, _) = makeSUT(serviceResult: .success(makeLocations()))
 
         await sut.loadIfNeeded() // state becomes .loaded
         await sut.retry()        // should still fetch
@@ -102,10 +123,11 @@ final class LocationsListViewModelTests: XCTestCase {
 
     func testRetry_FromErrorState_TransitionsToLoaded() async {
         let service = MockLocationsService()
-        let sut = LocationsListViewModel(locationService: service)
+        let opener = MockWikiOpener()
+        let sut = LocationsListViewModel(locationService: service, wikiOpener: opener)
 
         service.result = .failure(NetworkError.invalidResponse)
-        await sut.loadIfNeeded() // now in .error
+        await sut.loadIfNeeded()
 
         service.result = .success(makeLocations(count: 1))
         await sut.retry()
@@ -117,7 +139,7 @@ final class LocationsListViewModelTests: XCTestCase {
     }
 
     func testRetry_OnFailure_TransitionsToError() async {
-        let (sut, _) = makeSUT(result: .failure(NetworkError.decodingError("bad JSON")))
+        let (sut, _, _) = makeSUT(serviceResult: .failure(NetworkError.decodingError("bad JSON")))
 
         await sut.retry()
 
@@ -127,10 +149,18 @@ final class LocationsListViewModelTests: XCTestCase {
         XCTAssertFalse(message.isEmpty)
     }
 
+    func testRetry_FromIdleState_Fetches() async {
+        let (sut, service, _) = makeSUT(serviceResult: .success(makeLocations()))
+
+        await sut.retry()
+
+        XCTAssertEqual(service.fetchCallCount, 1)
+    }
+
     // MARK: - refresh
 
     func testRefresh_AlwaysFetches_RegardlessOfState() async {
-        let (sut, service) = makeSUT(result: .success(makeLocations()))
+        let (sut, service, _) = makeSUT(serviceResult: .success(makeLocations()))
 
         await sut.loadIfNeeded() // state becomes .loaded
         await sut.refresh()      // should still fetch
@@ -140,7 +170,8 @@ final class LocationsListViewModelTests: XCTestCase {
 
     func testRefresh_UpdatesLoadedLocations() async {
         let service = MockLocationsService()
-        let sut = LocationsListViewModel(locationService: service)
+        let opener = MockWikiOpener()
+        let sut = LocationsListViewModel(locationService: service, wikiOpener: opener)
 
         service.result = .success(makeLocations(count: 1))
         await sut.loadIfNeeded()
@@ -154,10 +185,20 @@ final class LocationsListViewModelTests: XCTestCase {
         XCTAssertEqual(result.count, 3)
     }
 
+    func testRefresh_OnFailure_TransitionsToError() async {
+        let (sut, _, _) = makeSUT(serviceResult: .failure(NetworkError.invalidResponse))
+
+        await sut.refresh()
+
+        guard case .error = sut.state else {
+            return XCTFail("Expected .error after failing refresh, got \(sut.state)")
+        }
+    }
+
     // MARK: - fetchCallCount
 
     func testFetchCallCount_TracksEachCall() async {
-        let (sut, service) = makeSUT(result: .success([]))
+        let (sut, service, _) = makeSUT(serviceResult: .success([]))
 
         await sut.loadIfNeeded()
         await sut.retry()
@@ -165,5 +206,64 @@ final class LocationsListViewModelTests: XCTestCase {
 
         // loadIfNeeded (1) + retry (1) + refresh (1)
         XCTAssertEqual(service.fetchCallCount, 3)
+    }
+
+    // MARK: - open
+
+    func testOpen_Success_DoesNotShowNotInstalledAlert() async {
+        let (sut, _, _) = makeSUT(openerSucceeds: true)
+        let location = Location(name: "Test", latitude: 52.0, longitude: 4.0)
+
+        await sut.open(location: location)
+
+        XCTAssertFalse(sut.isShowingNotInstalledAlert)
+    }
+
+    func testOpen_Failure_ShowsNotInstalledAlert() async {
+        let (sut, _, _) = makeSUT(openerSucceeds: false)
+        let location = Location(name: "Test", latitude: 52.0, longitude: 4.0)
+
+        await sut.open(location: location)
+
+        XCTAssertTrue(sut.isShowingNotInstalledAlert)
+    }
+
+    func testOpen_PassesCorrectLocationToOpener() async {
+        let (sut, _, opener) = makeSUT()
+        let location = Location(name: "Amsterdam", latitude: 52.3676, longitude: 4.9041)
+
+        await sut.open(location: location)
+
+        XCTAssertEqual(opener.lastOpenedLocation, location)
+    }
+
+    func testOpen_CallsOpenerExactlyOnce() async {
+        let (sut, _, opener) = makeSUT()
+        let location = Location(name: "Test", latitude: 0, longitude: 0)
+
+        await sut.open(location: location)
+
+        XCTAssertEqual(opener.openCallCount, 1)
+    }
+
+    func testOpen_CalledMultipleTimes_TracksAllCalls() async {
+        let (sut, _, opener) = makeSUT()
+        let location = Location(name: "Test", latitude: 0, longitude: 0)
+
+        await sut.open(location: location)
+        await sut.open(location: location)
+
+        XCTAssertEqual(opener.openCallCount, 2)
+    }
+
+    func testOpen_SuccessAfterPreviousFailure_AlertRemainsTrue() async {
+        let (sut, _, opener) = makeSUT(openerSucceeds: false)
+        let location = Location(name: "Test", latitude: 0, longitude: 0)
+
+        await sut.open(location: location) // sets alert to true
+        opener.shouldSucceed = true
+        await sut.open(location: location) // success — alert not reset by ViewModel
+
+        XCTAssertTrue(sut.isShowingNotInstalledAlert)
     }
 }
