@@ -26,6 +26,6 @@ struct LocationsListView: View {
 #Preview {
     LocationsListView(viewModel: LocationsListViewModel(
         locationService: LocationServiceImp(networkService: NetworkService()),
-        wikiOpener: wikipediaOpener(wikipediaDeeplink: WikipediaDeepLink())
+        wikiOpener: WikipediaOpener(deepLink: WikipediaDeepLink())
     ))
 }

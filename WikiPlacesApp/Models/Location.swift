@@ -6,40 +6,44 @@
 //
 
 import Foundation
+
+// MARK: - Model
 struct Location: Identifiable, Equatable {
-    var id: UUID
+    let id: UUID
     let name: String?
     let latitude: Double
     let longitude: Double
-    
+
     init(id: UUID = UUID(), name: String?, latitude: Double, longitude: Double) {
         self.id = id
         self.name = name
         self.latitude = latitude
         self.longitude = longitude
     }
-    
+
+// MARK: - Computed Properties
     var displayName: String {
         if let name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return name
         }
-        return Self.coordinateString(latitude: latitude, longitude: longitude)
+        return "Unnamed Location"
     }
 
     var coordinateString: String {
-        Self.coordinateString(latitude: latitude, longitude: longitude)
+        self.coordinateString(latitude: latitude, longitude: longitude)
     }
 
-    static func coordinateString(latitude: Double, longitude: Double) -> String {
+    func coordinateString(latitude: Double, longitude: Double) -> String {
         String(format: "Lat: %.4f, Lon: %.4f", latitude, longitude)
     }
 }
 
+// MARK: - Decodable
 extension Location: Decodable {
     private enum CodingKeys: String, CodingKey {
         case name
         case latitude = "lat"
-        case longitude = "long"
+        case longitude = "long"  // JSON key is "long", not the conventional "lon"
     }
 
     init(from decoder: Decoder) throws {
@@ -52,6 +56,7 @@ extension Location: Decodable {
     }
 }
 
-struct LocationResponse : Decodable {
+// MARK: - Response Wrapper
+struct LocationResponse: Decodable {
     let locations: [Location]
 }

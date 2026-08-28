@@ -10,25 +10,26 @@ import Combine
 
 @MainActor
 final class CustomLocationViewModel: ObservableObject {
+
+// MARK: - Published Properties
     @Published var name: String = ""
     @Published var latitudeText: String = ""
     @Published var longitudeText: String = ""
     @Published private(set) var latitudeError: String?
     @Published private(set) var longitudeError: String?
 
+// MARK: - Validation Ranges
     let latitudeRange: ClosedRange<Double> = -90...90
     let longitudeRange: ClosedRange<Double> = -180...180
 
-    /// Validates the current field values, publishing per-field error messages as a side
-    /// effect. Returns the parsed coordinate (and optional trimmed name) only when both
-    /// fields are valid.
+// MARK: - Functions
     @discardableResult
     func validatedCoordinate() -> Location? {
         let latResult = self.validate(latitudeText, range: self.latitudeRange, fieldName: "Latitude")
         let lonResult = self.validate(longitudeText, range: self.longitudeRange, fieldName: "Longitude")
         latitudeError = latResult.error
         longitudeError = lonResult.error
-        
+
         guard let latitude = latResult.value, let longitude = lonResult.value else {
             return nil
         }
