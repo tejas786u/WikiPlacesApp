@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+@MainActor
 @main
 struct WikiPlacesAppApp: App {
     @StateObject private var locationListViewModel: LocationsListViewModel

@@ -23,6 +23,7 @@ private struct StatusView<Actions: View>: View {
                 .foregroundStyle(tint)
                 .scaleEffect(appear ? 1 : 0.6)
                 .opacity(appear ? 1 : 0)
+                .accessibilityHidden(true)
 
             Text(title)
                 .font(.system(.title3, design: .rounded, weight: .semibold))
@@ -59,7 +60,6 @@ struct ErrorStateView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
         }
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -77,7 +77,6 @@ struct EmptyLocationsView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.large)
         }
-        .accessibilityElement(children: .combine)
     }
 }
 

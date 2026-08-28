@@ -34,6 +34,8 @@ struct NetworkService: NetworkServiceProtocol {
         }
         do {
             return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            throw NetworkError.decodingError(error.localizedDescription)
         }
     }
     

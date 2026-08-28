@@ -33,6 +33,7 @@ final class MockLocationsService: LocationRepositoryProtocol {
 
 // MARK: - MockWikiOpener
 
+@MainActor
 final class MockWikiOpener: DeepLinkOpenerProtocol {
     var shouldSucceed = true
     private(set) var openCallCount = 0

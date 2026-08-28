@@ -9,11 +9,14 @@ import Foundation
 import UIKit
 
 protocol DeepLinkOpenerProtocol {
+    @MainActor
     func openDeepLink(for location: Location) async -> Bool
 }
 
 struct wikipediaOpener: DeepLinkOpenerProtocol {
     let wikipediaDeeplink: WikipediaDeepLink
+
+    @MainActor
     func openDeepLink(for location: Location) async -> Bool {
         if let url = wikipediaDeeplink.createDeepLink(for: location) {
             guard UIApplication.shared.canOpenURL(url) else {
