@@ -39,6 +39,12 @@ A native iOS app that fetches a [curated list](https://raw.githubusercontent.com
 
 ---
 
+## Demo
+
+▶️ [Watch App Demo on Google Drive](https://drive.google.com/file/d/1E7EXDmlzH4XcDo_NWIhPrCok-Fnz8r_D/view?usp=sharing)
+
+---
+
 ## Screenshots
 
 | Skeleton | Location List | Custom Location | Open in Wikipedia | Not Installed Alert |
