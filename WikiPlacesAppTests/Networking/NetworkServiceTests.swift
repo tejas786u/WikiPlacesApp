@@ -129,9 +129,11 @@ final class NetworkServiceTests: XCTestCase {
 
         do {
             let _: SimpleResponse = try await sut.fetch(from: makeURL())
-            XCTFail("Expected a decoding error")
+            XCTFail("Expected NetworkError.decodingError")
+        } catch NetworkError.decodingError {
+            // expected — NetworkService wraps DecodingError in NetworkError.decodingError
         } catch {
-            XCTAssertTrue(error is DecodingError, "Expected DecodingError, got \(error)")
+            XCTFail("Unexpected error type: \(error)")
         }
     }
 
@@ -143,9 +145,11 @@ final class NetworkServiceTests: XCTestCase {
 
         do {
             let _: SimpleResponse = try await sut.fetch(from: makeURL())
-            XCTFail("Expected a decoding error")
+            XCTFail("Expected NetworkError.decodingError")
+        } catch NetworkError.decodingError {
+            // expected
         } catch {
-            XCTAssertTrue(error is DecodingError)
+            XCTFail("Unexpected error type: \(error)")
         }
     }
 

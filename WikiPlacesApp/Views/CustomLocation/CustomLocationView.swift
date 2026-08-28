@@ -9,6 +9,7 @@ import SwiftUI
 
 struct CustomLocationView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var viewModel = CustomLocationViewModel()
     @ObservedObject var launcher: LocationsListViewModel
     @FocusState private var focusedField: Field?
@@ -27,6 +28,7 @@ struct CustomLocationView: View {
                         .focused($focusedField, equals: .name)
                         .textInputAutocapitalization(.words)
                         .accessibilityLabel("Location name, optional")
+                        .accessibilityHint("Enter the location")
                 } header: {
                     Text("Details")
                 }
@@ -110,7 +112,9 @@ struct CustomLocationView: View {
     private func open() async {
         focusedField = nil
         guard let coordinate = viewModel.validatedCoordinate() else {
-            withAnimation(.default) { shakeTrigger += 1 }
+            if !reduceMotion {
+                withAnimation(.default) { shakeTrigger += 1 }
+            }
             return
         }
         isOpening = true

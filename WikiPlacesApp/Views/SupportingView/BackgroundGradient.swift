@@ -15,6 +15,7 @@ struct BackgroundGradient: View {
             endPoint: .bottom
         )
         .ignoresSafeArea()
+        .accessibilityHidden(true)
     }
 }
 
