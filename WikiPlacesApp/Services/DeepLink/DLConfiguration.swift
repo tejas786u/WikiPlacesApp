@@ -10,8 +10,8 @@ import Foundation
 enum WikipediaConfig {
     static let scheme = "wikipedia"
     static let host = "places"
-    
-    enum Queryparam {
+
+    enum QueryParam {
         static let latitude = "lat"
         static let longitude = "lon"
     }

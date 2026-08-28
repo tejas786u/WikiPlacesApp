@@ -9,7 +9,8 @@ import SwiftUI
 
 struct ListContentView: View {
     @ObservedObject var viewModel: LocationsListViewModel
-    
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         switch viewModel.state {
         case .idle, .loading:
@@ -35,14 +36,19 @@ struct ListContentView: View {
                         }
                     }
                     .transition(
-                        .asymmetric(
-                            insertion: .opacity.combined(with: .move(edge: .leading)),
-                            removal: .opacity
-                        )
+                        reduceMotion
+                            ? .opacity
+                            : .asymmetric(
+                                insertion: .opacity.combined(with: .move(edge: .leading)),
+                                removal: .opacity
+                            )
                     )
                     .animation(
-                        .spring(response: 0.45, dampingFraction: 0.82)
-                            .delay(Double(index) * 0.05),
+                        reduceMotion
+                            ? .none
+                            // Stagger delay creates a cascade slide-in as cards appear
+                            : .spring(response: 0.45, dampingFraction: 0.82)
+                                .delay(Double(index) * 0.05),
                         value: viewModel.state
                     )
                 }
@@ -60,6 +66,6 @@ struct ListContentView: View {
 #Preview {
     LocationsListView(viewModel: LocationsListViewModel(
         locationService: LocationServiceImp(networkService: NetworkService()),
-        wikiOpener: wikipediaOpener(wikipediaDeeplink: WikipediaDeepLink())
+        wikiOpener: WikipediaOpener(deepLink: WikipediaDeepLink())
     ))
 }

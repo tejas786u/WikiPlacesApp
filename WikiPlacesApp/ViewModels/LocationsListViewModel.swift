@@ -8,7 +8,8 @@
 import Foundation
 import Combine
 
-enum States: Equatable {
+// MARK: - ListLoading States
+enum LocationsListState: Equatable {
     case idle
     case loading
     case loaded([Location])
@@ -16,18 +17,23 @@ enum States: Equatable {
 }
 
 @MainActor
-class LocationsListViewModel: ObservableObject {
-    @Published private(set) var state: States = .idle
+final class LocationsListViewModel: ObservableObject {
+
+// MARK: - Published Properties
+    @Published private(set) var state: LocationsListState = .idle
     @Published var isShowingNotInstalledAlert = false
 
+// MARK: - Dependencies
     private let locationService: LocationRepositoryProtocol
     private let wikiOpener: DeepLinkOpenerProtocol
 
+// MARK: - Init
     init(locationService: LocationRepositoryProtocol, wikiOpener: DeepLinkOpenerProtocol) {
         self.locationService = locationService
         self.wikiOpener = wikiOpener
     }
-
+    
+// MARK: - Functions
     func loadIfNeeded() async {
         guard state == .idle else { return }
         state = .loading
@@ -43,7 +49,7 @@ class LocationsListViewModel: ObservableObject {
         state = .loading
         await performFetch()
     }
-    
+
     func open(location: Location) async {
         let success = await wikiOpener.openDeepLink(for: location)
         if !success {

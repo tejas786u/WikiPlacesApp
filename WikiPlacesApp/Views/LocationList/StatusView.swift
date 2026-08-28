@@ -15,14 +15,16 @@ private struct StatusView<Actions: View>: View {
     @ViewBuilder let actions: Actions
 
     @State private var appear = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: systemImage)
                 .font(.system(size: 44))
                 .foregroundStyle(tint)
-                .scaleEffect(appear ? 1 : 0.6)
+                .scaleEffect(reduceMotion ? 1 : (appear ? 1 : 0.6))
                 .opacity(appear ? 1 : 0)
+                // Decorative — meaning is already conveyed by the title text below
                 .accessibilityHidden(true)
 
             Text(title)
@@ -36,15 +38,17 @@ private struct StatusView<Actions: View>: View {
 
             actions
         }
+        .frame(maxWidth: .infinity)
         .padding()
         .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+            withAnimation(reduceMotion ? .none : .spring(response: 0.5, dampingFraction: 0.6)) {
                 appear = true
             }
         }
     }
 }
 
+// MARK: - Error State
 struct ErrorStateView: View {
     let message: String
     let retry: () -> Void
@@ -63,6 +67,7 @@ struct ErrorStateView: View {
     }
 }
 
+// MARK: - Empty State
 struct EmptyLocationsView: View {
     let retry: () -> Void
 

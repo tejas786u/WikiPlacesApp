@@ -16,10 +16,12 @@ struct CustomLocationView: View {
     @State private var isOpening = false
     @State private var shakeTrigger: CGFloat = 0
 
+// MARK: - Focus Fields
     private enum Field {
         case name, latitude, longitude
     }
-    
+
+// MARK: - Body
     var body: some View {
         NavigationStack {
             Form {
@@ -82,7 +84,8 @@ struct CustomLocationView: View {
             }
         }
     }
-    
+
+// MARK: - Subviews
     @ViewBuilder
     private func fieldRow(
         placeholder: String,
@@ -109,6 +112,7 @@ struct CustomLocationView: View {
         .animation(.default, value: error)
     }
 
+// MARK: - Actions
     private func open() async {
         focusedField = nil
         guard let coordinate = viewModel.validatedCoordinate() else {

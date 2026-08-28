@@ -8,10 +8,22 @@
 import Foundation
 
 final class DependencyInjector {
-    private let networkService: NetworkServiceProtocol = NetworkService()
-    lazy var locationService: LocationRepositoryProtocol = LocationServiceImp(networkService: networkService)
-    lazy var wikiOpener: wikipediaOpener = wikipediaOpener(wikipediaDeeplink: WikipediaDeepLink())
 
+    // MARK: - Configuration
+    private let useLocalData = false  // Make it 'true' to load data from bundled JSON file.
+
+    // MARK: - Dependencies
+    private let networkService: NetworkServiceProtocol = NetworkService()
+    private lazy var locationService: LocationRepositoryProtocol = {
+        if self.useLocalData {
+            return LocalLocationService() as LocationRepositoryProtocol
+        } else {
+            return LocationServiceImp(networkService: networkService) as LocationRepositoryProtocol
+        }
+    }()
+    private lazy var wikiOpener: DeepLinkOpenerProtocol = WikipediaOpener(deepLink: WikipediaDeepLink())
+
+    // MARK: - Factory
     func makeLocationsViewModel() -> LocationsListViewModel {
         LocationsListViewModel(locationService: locationService, wikiOpener: wikiOpener)
     }

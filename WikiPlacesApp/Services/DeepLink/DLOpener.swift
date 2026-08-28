@@ -8,27 +8,29 @@
 import Foundation
 import UIKit
 
+// MARK: - Protocol
 protocol DeepLinkOpenerProtocol {
     @MainActor
     func openDeepLink(for location: Location) async -> Bool
 }
 
-struct wikipediaOpener: DeepLinkOpenerProtocol {
-    let wikipediaDeeplink: WikipediaDeepLink
+// MARK: - Implementation
+struct WikipediaOpener: DeepLinkOpenerProtocol {
+    let deepLink: DeepLinkCreateProtocol
 
     @MainActor
     func openDeepLink(for location: Location) async -> Bool {
-        if let url = wikipediaDeeplink.createDeepLink(for: location) {
-            guard UIApplication.shared.canOpenURL(url) else {
-                return false
-            }
-            return await withCheckedContinuation { continuation in
-                UIApplication.shared.open(url, options: [:]) { success in
-                    continuation.resume(returning: success)
-                }
-            }
-        } else {
+        guard let url = deepLink.createDeepLink(for: location) else {
             return false
+        }
+        guard UIApplication.shared.canOpenURL(url) else {
+            return false
+        }
+        // withCheckedContinuation bridges the callback-based UIApplication.open into async/await
+        return await withCheckedContinuation { continuation in
+            UIApplication.shared.open(url, options: [:]) { success in
+                continuation.resume(returning: success)
+            }
         }
     }
 }

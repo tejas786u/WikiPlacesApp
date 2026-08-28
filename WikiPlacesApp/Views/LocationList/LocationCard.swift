@@ -56,19 +56,22 @@ struct LocationCard: View {
         }
         .buttonStyle(PressableButtonStyle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(accessibilityLabel))
+        .accessibilityLabel(Text(location.displayName))
         .accessibilityHint(Text("Opens this location in Wikipedia"))
         .accessibilityAddTraits(.isButton)
     }
 
-    /// Avoids announcing the coordinates twice when the location has no name and
-    /// `displayName` already falls back to the same coordinate string.
-    private var accessibilityLabel: String {
-        location.displayName == location.coordinateString
-            ? location.displayName
-            : "\(location.displayName). \(location.coordinateString)"
-    }
+//    // MARK: - Accessibility
+//
+//    /// Avoids announcing the coordinates twice when the location has no name and
+//    /// `displayName` already falls back to the same coordinate string.
+//    private var accessibilityLabel: String {
+//        location.displayName == location.coordinateString
+//            ? location.displayName
+//            : "\(location.displayName). \(location.coordinateString)"
+//    }
 
+// MARK: - Styling
     private var gradientColors: [Color] {
         let palettes: [[Color]] = [
             [.blue, .cyan],
@@ -78,13 +81,16 @@ struct LocationCard: View {
             [.indigo, .blue],
             [.pink, .orange],
         ]
+        // Hash-based index gives each location a consistent colour without storing state
         let index = abs(location.displayName.hashValue) % palettes.count
         return palettes[index]
     }
 }
 
+// MARK: - Skeleton
 struct LocationCardSkeleton: View {
     @State private var shimmerX: CGFloat = -1
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 16) {
@@ -111,6 +117,7 @@ struct LocationCardSkeleton: View {
         )
         .overlay(shimmerOverlay)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.linear(duration: 1.1).repeatForever(autoreverses: false)) {
                 shimmerX = 2
             }
@@ -118,6 +125,7 @@ struct LocationCardSkeleton: View {
         .accessibilityHidden(true)
     }
 
+// MARK: - Shimmer
     private var shimmerOverlay: some View {
         GeometryReader { proxy in
             LinearGradient(
