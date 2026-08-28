@@ -9,7 +9,13 @@ import SwiftUI
 
 struct LocationCard: View {
     let location: Location
+    let index: Int
     let action: () -> Void
+
+    @State private var appeared = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    // MARK: - Body
 
     var body: some View {
         Button(action: action) {
@@ -59,19 +65,21 @@ struct LocationCard: View {
         .accessibilityLabel(Text(location.displayName))
         .accessibilityHint(Text("Opens this location in Wikipedia"))
         .accessibilityAddTraits(.isButton)
+        // Slide in from the right; each card staggered by index * 60ms
+        .offset(x: reduceMotion ? 0 : (appeared ? 0 : 400))
+        .opacity(appeared ? 1 : 0)
+        .onAppear {
+            withAnimation(
+                .spring(response: 0.45, dampingFraction: 0.82)
+                    .delay(Double(index) * 0.06)
+            ) {
+                appeared = true
+            }
+        }
     }
 
-//    // MARK: - Accessibility
-//
-//    /// Avoids announcing the coordinates twice when the location has no name and
-//    /// `displayName` already falls back to the same coordinate string.
-//    private var accessibilityLabel: String {
-//        location.displayName == location.coordinateString
-//            ? location.displayName
-//            : "\(location.displayName). \(location.coordinateString)"
-//    }
+    // MARK: - Styling
 
-// MARK: - Styling
     private var gradientColors: [Color] {
         let palettes: [[Color]] = [
             [.blue, .cyan],
@@ -88,9 +96,12 @@ struct LocationCard: View {
 }
 
 // MARK: - Skeleton
+
 struct LocationCardSkeleton: View {
     @State private var shimmerX: CGFloat = -1
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    // MARK: - Body
 
     var body: some View {
         HStack(spacing: 16) {
@@ -125,7 +136,8 @@ struct LocationCardSkeleton: View {
         .accessibilityHidden(true)
     }
 
-// MARK: - Shimmer
+    // MARK: - Shimmer
+
     private var shimmerOverlay: some View {
         GeometryReader { proxy in
             LinearGradient(
@@ -142,5 +154,5 @@ struct LocationCardSkeleton: View {
 }
 
 #Preview {
-    LocationCard(location: Location(name: "Unknown Location", latitude: 80.0, longitude: 90.0), action: {})
+    LocationCard(location: Location(name: "Unknown Location", latitude: 80.0, longitude: 90.0), index: 0, action: {})
 }

@@ -30,27 +30,11 @@ struct ListContentView: View {
         case .loaded(let locations):
             LazyVStack(spacing: 14) {
                 ForEach(Array(locations.enumerated()), id: \.element.id) { index, location in
-                    LocationCard(location: location) {
+                    LocationCard(location: location, index: index) {
                         Task {
                             await viewModel.open(location: location)
                         }
                     }
-                    .transition(
-                        reduceMotion
-                            ? .opacity
-                            : .asymmetric(
-                                insertion: .opacity.combined(with: .move(edge: .leading)),
-                                removal: .opacity
-                            )
-                    )
-                    .animation(
-                        reduceMotion
-                            ? .none
-                            // Stagger delay creates a cascade slide-in as cards appear
-                            : .spring(response: 0.45, dampingFraction: 0.82)
-                                .delay(Double(index) * 0.05),
-                        value: viewModel.state
-                    )
                 }
             }
 
