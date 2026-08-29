@@ -20,17 +20,17 @@ final class LocationTests: XCTestCase {
 
     func testDisplayName_WithNilName_ReturnsCoordinateString() {
         let location = Location(name: nil, latitude: 52.3676, longitude: 4.9041)
-        XCTAssertEqual(location.displayName, Location.coordinateString(latitude: 52.3676, longitude: 4.9041))
+        XCTAssertEqual(location.displayName, "Unnamed Location")
     }
 
     func testDisplayName_WithEmptyName_ReturnsCoordinateString() {
         let location = Location(name: "", latitude: 52.3676, longitude: 4.9041)
-        XCTAssertEqual(location.displayName, Location.coordinateString(latitude: 52.3676, longitude: 4.9041))
+        XCTAssertEqual(location.displayName, "Unnamed Location")
     }
 
     func testDisplayName_WithWhitespaceOnlyName_ReturnsCoordinateString() {
         let location = Location(name: "   ", latitude: 52.3676, longitude: 4.9041)
-        XCTAssertEqual(location.displayName, Location.coordinateString(latitude: 52.3676, longitude: 4.9041))
+        XCTAssertEqual(location.displayName, "Unnamed Location")
     }
 
     func testDisplayName_NameWithLeadingTrailingWhitespace_ReturnsName() {
@@ -60,7 +60,7 @@ final class LocationTests: XCTestCase {
         let lat = 48.8566
         let lon = 2.3522
         let location = Location(name: nil, latitude: lat, longitude: lon)
-        XCTAssertEqual(location.coordinateString, Location.coordinateString(latitude: lat, longitude: lon))
+        XCTAssertEqual(location.coordinateString, location.coordinateString(latitude: lat, longitude: lon))
     }
 
     func testCoordinateString_RoundsToFourDecimalPlaces() {
