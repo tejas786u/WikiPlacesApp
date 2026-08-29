@@ -13,12 +13,15 @@ struct LocationCard: View {
     let action: () -> Void
 
     @State private var appeared = false
+    @State private var isTapped = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // MARK: - Body
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            Task { await handleTap() }
+        } label: {
             HStack(alignment: .top, spacing: 16) {
                 ZStack {
                     Circle()
@@ -57,29 +60,46 @@ struct LocationCard: View {
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(.background)
-                    .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+                    .shadow(color: .black.opacity(isTapped ? 0.03 : 0.08), radius: isTapped ? 3 : 10, x: 0, y: isTapped ? 1 : 4)
             )
         }
-        .buttonStyle(PressableButtonStyle())
+        .buttonStyle(.plain)
+        // Scale down on tap - Like button press effect.
+        .scaleEffect(reduceMotion ? 1 : (isTapped ? 0.93 : 1))
+        .animation(
+            reduceMotion ? .none : (isTapped ? .easeIn(duration: 0.08) : .spring(response: 0.4, dampingFraction: 0.5)),
+            value: isTapped
+        )
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(location.displayName))
         .accessibilityHint(Text("Opens this location in Wikipedia"))
         .accessibilityAddTraits(.isButton)
-        // Slide in from the right; each card staggered by index * 60ms
+        // Slide in from the right the moment the card enters the viewport.
         .offset(x: reduceMotion ? 0 : (appeared ? 0 : 400))
         .opacity(appeared ? 1 : 0)
         .onAppear {
-            withAnimation(
-                .spring(response: 0.45, dampingFraction: 0.82)
-                    .delay(Double(index) * 0.06)
-            ) {
-                appeared = true
+            let delay = index < 7 ? Double(index) * 0.1 : 0.0
+            Task { @MainActor in
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(delay)) {
+                    appeared = true
+                }
             }
         }
     }
 
-    // MARK: - Styling
+// MARK: - Actions
+    private func handleTap() async {
+        guard !isTapped else { return }
+        if !reduceMotion {
+            isTapped = true
+            try? await Task.sleep(for: .milliseconds(120))
+            isTapped = false
+            try? await Task.sleep(for: .milliseconds(80))
+        }
+        action()
+    }
 
+// MARK: - Styling
     private var gradientColors: [Color] {
         let palettes: [[Color]] = [
             [.blue, .cyan],
@@ -96,13 +116,11 @@ struct LocationCard: View {
 }
 
 // MARK: - Skeleton
-
 struct LocationCardSkeleton: View {
     @State private var shimmerX: CGFloat = -1
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    // MARK: - Body
-
+// MARK: - Body
     var body: some View {
         HStack(spacing: 16) {
             Circle()
@@ -117,7 +135,6 @@ struct LocationCardSkeleton: View {
                     .fill(Color.primary.opacity(0.06))
                     .frame(width: 96, height: 12)
             }
-
             Spacer()
         }
         .padding(16)
@@ -136,8 +153,7 @@ struct LocationCardSkeleton: View {
         .accessibilityHidden(true)
     }
 
-    // MARK: - Shimmer
-
+// MARK: - Shimmer
     private var shimmerOverlay: some View {
         GeometryReader { proxy in
             LinearGradient(
