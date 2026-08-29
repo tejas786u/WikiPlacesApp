@@ -28,8 +28,9 @@ A native iOS app that fetches a [curated list](https://raw.githubusercontent.com
 ## Features
 
 - **Location List** - Fetches locations from a remote JSON feed and displays them as interactive cards
-- **Staggered Animations** - Location cards slide in from the right, one by one (60 ms stagger per card), driven by `onAppear` inside each `LocationCard`; skeleton cards display a shimmer only with no slide; Reduce Motion skips the offset and fades cards in instead
-- **Skeleton Loading** - Animated shimmer placeholder cards while the network request made
+- **Staggered Animations** - Location cards slide in from the right, one by one (100 ms stagger for the first 7 cards, immediate for scrolled cards), driven by `onAppear` inside each `LocationCard`; skeleton cards display a shimmer only with no slide; Reduce Motion skips the offset and fades cards in instead
+- **Tap Depth Animation** - Tapping a location card scales it down to 93 % with a compressed shadow, then springs back with a subtle bounce before opening Wikipedia - gives a physical "press" feel; skipped entirely when Reduce Motion is on
+- **Skeleton Loading** - Animated shimmer placeholder cards while the network request is in flight
 - **Error & Empty States** - Distinct views with accessible retry/refresh actions
 - **Custom Location** - Enter any latitude/longitude (with an optional name) to open an coordinate in Modified Wikipedia app
 - **Local Data Mode** - Flip a single `useLocalData` flag in `DependencyInjector` to load locations from a bundled JSON file instead of the network (useful for offline development and testing)
@@ -41,7 +42,7 @@ A native iOS app that fetches a [curated list](https://raw.githubusercontent.com
 
 ## Demo
 
-▶️ [Watch App Demo on Google Drive](https://drive.google.com/file/d/1E7EXDmlzH4XcDo_NWIhPrCok-Fnz8r_D/view?usp=sharing)
+▶️ [Watch App Demo](https://drive.google.com/file/d/13G_RpqTY4HHZ-QMeYY-0ANMytc1_JNUt/view?usp=sharing)
 
 ---
 
@@ -105,7 +106,7 @@ WikiPlacesApp/
 │       ├── LocationList/
 │       │   ├── LocationsListView.swift     # Scroll container + .task loader
 │       │   ├── ListContentView.swift       # State-driven switch (loading/loaded/error/empty)
-│       │   ├── LocationCard.swift          # LocationCard (index-based stagger, right→left slide-in) + LocationCardSkeleton (shimmer)
+│       │   ├── LocationCard.swift          # LocationCard (right→left slide-in, stagger, tap depth animation) + LocationCardSkeleton (shimmer)
 │       │   └── StatusView.swift            # Reusable error/empty state view
 │       ├── CustomLocation/
 │       │   └── CustomLocationView.swift    # Form sheet for custom lat/lon entry
@@ -189,7 +190,7 @@ Run with `⌘U` against the `WikiPlacesAppUITests` scheme.
 | VoiceOver labels | All interactive elements have explicit `accessibilityLabel` and `accessibilityHint` |
 | Decorative elements | Background gradient and icon images are marked `.accessibilityHidden(true)` |
 | Button independence | Error/empty state action buttons are **not** merged with surrounding text - they remain independently activatable by VoiceOver |
-| Reduce Motion | Card slide-in stagger (offset skipped, fade only), skeleton shimmer, button press scale, validation shake, and status view pop-in all skip their animations when `accessibilityReduceMotion` is enabled |
+| Reduce Motion | Card slide-in stagger (offset skipped, fade only), tap depth animation (scale + shadow skip), skeleton shimmer, button press scale, validation shake, and status view pop-in all skip their animations when `accessibilityReduceMotion` is enabled |
 
 ---
 
