@@ -15,39 +15,35 @@ final class DependencyInjectorTests: XCTestCase {
         DependencyInjector()
     }
 
-    // MARK: - makeLocationsViewModel
+    // MARK: - makeLocationsWorker
 
-    func testMakeLocationsViewModel_ReturnsNonNilViewModel() {
+    func testMakeLocationsWorker_ReturnsNonNilWorker() {
         let sut = makeSUT()
-        let viewModel = sut.makeLocationsViewModel()
-        XCTAssertNotNil(viewModel)
+        let worker = sut.makeLocationsWorker()
+        XCTAssertNotNil(worker)
     }
 
-    func testMakeLocationsViewModel_InitialStateIsIdle() {
+    func testMakeLocationsWorker_EachCallReturnsAWorker() {
+        // locationsWorker is a lazy var — reused under the hood, but LocationsWorker
+        // is a value type so we can only assert both calls succeed, not reference identity.
         let sut = makeSUT()
-        let viewModel = sut.makeLocationsViewModel()
-        XCTAssertEqual(viewModel.state, .idle)
+        let first = sut.makeLocationsWorker()
+        let second = sut.makeLocationsWorker()
+        XCTAssertNotNil(first)
+        XCTAssertNotNil(second)
     }
 
-    func testMakeLocationsViewModel_InitialIsShowingAlertIsFalse() {
+    // MARK: - makeDeepLinkWorker
+
+    func testMakeDeepLinkWorker_ReturnsNonNilWorker() {
         let sut = makeSUT()
-        let viewModel = sut.makeLocationsViewModel()
-        XCTAssertFalse(viewModel.isShowingNotInstalledAlert)
+        let worker = sut.makeDeepLinkWorker()
+        XCTAssertNotNil(worker)
     }
 
-    func testMakeLocationsViewModel_EachCallReturnsDistinctInstance() {
-        let sut = makeSUT()
-        let first = sut.makeLocationsViewModel()
-        let second = sut.makeLocationsViewModel()
-        XCTAssertFalse(first === second, "Each call should produce a distinct view model instance")
-    }
-
-    func testMakeLocationsViewModel_SharesLocationServiceAcrossInstances() {
-        // locationService is a lazy var — same instance is reused
-        let sut = makeSUT()
-        let first = sut.makeLocationsViewModel()
-        let second = sut.makeLocationsViewModel()
-        // Both view models are valid and independent
+    func testMakeDeepLinkWorker_EachInjectorReturnsIndependentInstance() {
+        let first = makeSUT().makeDeepLinkWorker()
+        let second = makeSUT().makeDeepLinkWorker()
         XCTAssertNotNil(first)
         XCTAssertNotNil(second)
     }

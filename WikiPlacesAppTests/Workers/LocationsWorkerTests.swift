@@ -1,22 +1,22 @@
 //
-//  LocationServiceImpTests.swift
+//  LocationsWorkerTests.swift
 //  WikiPlacesAppTests
 //
-//  Created by Tejas Patel on 28/08/26.
+//  Created by Tejas Patel on 02/09/26.
 //
 
 import XCTest
 @testable import WikiPlacesApp
 
 @MainActor
-final class LocationServiceImpTests: XCTestCase {
+final class LocationsWorkerTests: XCTestCase {
 
     private func makeSUT(
         networkResult: MockNetworkService.MockResult = .success(LocationResponse(locations: []))
-    ) -> (sut: LocationServiceImp, network: MockNetworkService) {
+    ) -> (sut: LocationsWorker, network: MockNetworkService) {
         let network = MockNetworkService()
         network.result = networkResult
-        let sut = LocationServiceImp(networkService: network)
+        let sut = LocationsWorker(networkService: network)
         return (sut, network)
     }
 
@@ -107,7 +107,7 @@ final class LocationServiceImpTests: XCTestCase {
         let network = MockNetworkService()
         network.result = .success(LocationResponse(locations: []))
         let customURL = URL(string: "https://custom.example.com/locations.json")!
-        let sut = LocationServiceImp(networkService: network, defaultURL: customURL)
+        let sut = LocationsWorker(networkService: network, defaultURL: customURL)
 
         _ = try await sut.fetchLocations()
 

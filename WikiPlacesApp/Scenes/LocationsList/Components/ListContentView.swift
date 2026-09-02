@@ -2,17 +2,18 @@
 //  ListContentView.swift
 //  WikiPlacesApp
 //
-//  Created by Tejas Patel on 27/08/26.
+//  Created by Tejas Patel on 02/09/26.
 //
 
 import SwiftUI
 
 struct ListContentView: View {
-    @ObservedObject var viewModel: LocationsListViewModel
+    let interactor: LocationsListBusinessLogic
+    @ObservedObject var presenter: LocationsListPresenter
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        switch viewModel.state {
+        switch presenter.state {
         case .idle, .loading:
             LazyVStack(spacing: 14) {
                 ForEach(0..<6, id: \.self) { _ in
@@ -23,7 +24,7 @@ struct ListContentView: View {
 
         case .loaded(let locations) where locations.isEmpty:
             EmptyLocationsView {
-                Task { await viewModel.retry() }
+                Task { await interactor.retry() }
             }
             .padding(.top, 64)
 
@@ -32,7 +33,7 @@ struct ListContentView: View {
                 ForEach(Array(locations.enumerated()), id: \.element.id) { index, location in
                     LocationCard(location: location, index: index) {
                         Task {
-                            await viewModel.open(location: location)
+                            await interactor.open(location: location)
                         }
                     }
                 }
@@ -40,7 +41,7 @@ struct ListContentView: View {
 
         case .error(let message):
             ErrorStateView(message: message) {
-                Task { await viewModel.retry() }
+                Task { await interactor.retry() }
             }
             .padding(.top, 64)
         }
@@ -48,8 +49,6 @@ struct ListContentView: View {
 }
 
 #Preview {
-    LocationsListView(viewModel: LocationsListViewModel(
-        locationService: LocationServiceImp(networkService: NetworkService()),
-        wikiOpener: WikipediaOpener(deepLink: WikipediaDeepLink())
-    ))
+    let scene = LocationsListSceneBuilder.build(dependencyInjector: DependencyInjector())
+    LocationsListView(interactor: scene.interactor, presenter: scene.presenter)
 }

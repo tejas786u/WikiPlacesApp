@@ -10,15 +10,21 @@ import SwiftUI
 @MainActor
 @main
 struct WikiPlacesAppApp: App {
-    @StateObject private var locationListViewModel: LocationsListViewModel
+    private let dependencyInjector = DependencyInjector()
+    @StateObject private var presenter: LocationsListPresenter
+    private let interactor: LocationsListBusinessLogic
+    private let router: LocationsListRoutingLogic
 
     init() {
-        _locationListViewModel = StateObject(wrappedValue: DependencyInjector().makeLocationsViewModel())
+        let scene = LocationsListSceneBuilder.build(dependencyInjector: dependencyInjector)
+        _presenter = StateObject(wrappedValue: scene.presenter)
+        interactor = scene.interactor
+        router = scene.router
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView(locationListViewModel: locationListViewModel)
+            ContentView(interactor: interactor, presenter: presenter, router: router)
         }
     }
 }

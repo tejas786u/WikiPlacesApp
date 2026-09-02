@@ -2,16 +2,19 @@
 //  CustomLocationView.swift
 //  WikiPlacesApp
 //
-//  Created by Tejas Patel on 28/08/26.
+//  Created by Tejas Patel on 02/09/26.
 //
 
 import SwiftUI
 
 struct CustomLocationView: View {
+    let interactor: CustomLocationBusinessLogic
+    @ObservedObject var presenter: CustomLocationPresenter
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @StateObject private var viewModel = CustomLocationViewModel()
-    @ObservedObject var launcher: LocationsListViewModel
+    @State private var name: String = ""
+    @State private var latitudeText: String = ""
+    @State private var longitudeText: String = ""
     @FocusState private var focusedField: Field?
     @State private var isOpening = false
     @State private var shakeTrigger: CGFloat = 0
@@ -26,7 +29,7 @@ struct CustomLocationView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Name (optional)", text: $viewModel.name)
+                    TextField("Name (optional)", text: $name)
                         .focused($focusedField, equals: .name)
                         .textInputAutocapitalization(.words)
                         .accessibilityLabel("Location name, optional")
@@ -38,17 +41,17 @@ struct CustomLocationView: View {
                 Section {
                     fieldRow(
                         placeholder: "Latitude (-90 to 90)",
-                        text: $viewModel.latitudeText,
+                        text: $latitudeText,
                         field: .latitude,
-                        error: viewModel.latitudeError,
+                        error: presenter.latitudeError,
                         accessibilityLabel: "Latitude",
                         accessibilityHint: "Enter a value between negative 90 and 90"
                     )
                     fieldRow(
                         placeholder: "Longitude (-180 to 180)",
-                        text: $viewModel.longitudeText,
+                        text: $longitudeText,
                         field: .longitude,
-                        error: viewModel.longitudeError,
+                        error: presenter.longitudeError,
                         accessibilityLabel: "Longitude",
                         accessibilityHint: "Enter a value between negative 180 and 180"
                     )
@@ -83,6 +86,11 @@ struct CustomLocationView: View {
                 }
             }
         }
+        .alert("Wikipedia App Not Found", isPresented: $presenter.isShowingNotInstalledAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Install the modified Wikipedia app to open locations there.")
+        }
     }
 
 // MARK: - Subviews
@@ -115,21 +123,26 @@ struct CustomLocationView: View {
 // MARK: - Actions
     private func open() async {
         focusedField = nil
-        guard let coordinate = viewModel.validatedCoordinate() else {
+        interactor.validate(request: CustomLocation.Validate.Request(
+            name: name,
+            latitudeText: latitudeText,
+            longitudeText: longitudeText
+        ))
+        guard presenter.isValid else {
             if !reduceMotion {
                 withAnimation(.default) { shakeTrigger += 1 }
             }
             return
         }
         isOpening = true
-        await launcher.open(location: coordinate)
+        await interactor.open(request: CustomLocation.Open.Request())
         isOpening = false
-        if !launcher.isShowingNotInstalledAlert {
+        if !presenter.isShowingNotInstalledAlert {
             dismiss()
         }
     }
 }
 
 #Preview {
-    CustomLocationView(launcher: DependencyInjector().makeLocationsViewModel())
+    CustomLocationSceneBuilder.build(dependencyInjector: DependencyInjector())
 }

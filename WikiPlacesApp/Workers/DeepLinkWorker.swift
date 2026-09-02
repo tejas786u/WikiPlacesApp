@@ -1,21 +1,21 @@
 //
-//  DLOpener.swift
+//  DeepLinkWorker.swift
 //  WikiPlacesApp
 //
-//  Created by Tejas Patel on 27/08/26.
+//  Created by Tejas Patel on 02/09/26.
 //
 
 import Foundation
 import UIKit
 
 // MARK: - Protocol
-protocol DeepLinkOpenerProtocol {
+protocol DeepLinkWorkerProtocol {
     @MainActor
     func openDeepLink(for location: Location) async -> Bool
 }
 
 // MARK: - Implementation
-struct WikipediaOpener: DeepLinkOpenerProtocol {
+struct DeepLinkWorker: DeepLinkWorkerProtocol {
     let deepLink: DeepLinkCreateProtocol
 
     @MainActor

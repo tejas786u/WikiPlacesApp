@@ -2,18 +2,20 @@
 //  ContentView.swift
 //  WikiPlacesApp
 //
-//  Created by Tejas Patel on 27/08/26.
+//  Created by Tejas Patel on 02/09/26.
 //
 
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject var locationListViewModel: LocationsListViewModel
+    let interactor: LocationsListBusinessLogic
+    @ObservedObject var presenter: LocationsListPresenter
+    let router: LocationsListRoutingLogic
     @State private var isShowingCustomLocationSheet = false
-    
+
     var body: some View {
         NavigationStack {
-            LocationsListView(viewModel: locationListViewModel)
+            LocationsListView(interactor: interactor, presenter: presenter)
                 .navigationTitle("Places")
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
@@ -28,9 +30,9 @@ struct ContentView: View {
                 }
         }
         .sheet(isPresented: $isShowingCustomLocationSheet) {
-            CustomLocationView(launcher: locationListViewModel)
+            router.routeToCustomLocation()
         }
-        .alert("Wikipedia App Not Found", isPresented: $locationListViewModel.isShowingNotInstalledAlert) {
+        .alert("Wikipedia App Not Found", isPresented: $presenter.isShowingNotInstalledAlert) {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Install the modified Wikipedia app to open locations there.")
@@ -39,5 +41,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(locationListViewModel: DependencyInjector().makeLocationsViewModel())
+    let scene = LocationsListSceneBuilder.build(dependencyInjector: DependencyInjector())
+    ContentView(interactor: scene.interactor, presenter: scene.presenter, router: scene.router)
 }
