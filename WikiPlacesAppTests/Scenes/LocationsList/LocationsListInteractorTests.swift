@@ -161,47 +161,6 @@ final class LocationsListInteractorTests: XCTestCase {
         XCTAssertEqual(worker.fetchCallCount, 1)
     }
 
-    // MARK: - refresh
-
-    func testRefresh_AlwaysFetches_RegardlessOfState() async {
-        let (sut, worker, _, _) = makeSUT(workerResult: .success(makeLocations()))
-
-        await sut.loadIfNeeded() // phase becomes .loaded
-        await sut.retry()      // should still fetch
-
-        XCTAssertEqual(worker.fetchCallCount, 2)
-    }
-
-    func testRefresh_UpdatesLoadedLocations() async {
-        let worker = MockLocationsWorker()
-        let deepLinkWorker = MockDeepLinkWorker()
-        let presenter = MockLocationsListPresenter()
-        let sut = LocationsListInteractor(worker: worker, deepLinkWorker: deepLinkWorker)
-        sut.presenter = presenter
-
-        worker.result = .success(makeLocations(count: 1))
-        await sut.loadIfNeeded()
-
-        worker.result = .success(makeLocations(count: 3))
-        await sut.retry()
-
-        guard case .success(let result) = presenter.loadResponses.last?.result else {
-            return XCTFail("Expected a success response after refresh")
-        }
-        XCTAssertEqual(result.count, 3)
-        XCTAssertEqual(sut.locations.count, 3)
-    }
-
-    func testRefresh_OnFailure_PresentsError() async {
-        let (sut, _, _, presenter) = makeSUT(workerResult: .failure(NetworkError.invalidResponse))
-
-        await sut.retry()
-
-        guard case .failure = presenter.loadResponses.last?.result else {
-            return XCTFail("Expected a failure response after failing refresh")
-        }
-    }
-
     // MARK: - fetchCallCount
 
     func testFetchCallCount_TracksEachCall() async {
@@ -209,10 +168,9 @@ final class LocationsListInteractorTests: XCTestCase {
 
         await sut.loadIfNeeded()
         await sut.retry()
-        await sut.retry()
 
-        // loadIfNeeded (1) + retry (1) + refresh (1)
-        XCTAssertEqual(worker.fetchCallCount, 3)
+        // loadIfNeeded (1) + retry (1)
+        XCTAssertEqual(worker.fetchCallCount, 2)
     }
 
     // MARK: - open
