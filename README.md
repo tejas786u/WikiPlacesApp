@@ -56,28 +56,35 @@ A native iOS app that fetches a [curated list](https://raw.githubusercontent.com
 
 ## Architecture
 
-The app follows **MVVM** with a protocol-oriented dependency injection layer. All ViewModels are `@MainActor`-isolated, ensuring `@Published` mutations always occur on the main thread without manual `DispatchQueue.main` calls.
+The app follows **VIP (View–Interactor–Presenter / Clean Swift)** with a protocol-oriented dependency injection layer, organized as two independent **Scenes**: `LocationsList` and `CustomLocation`. Each Scene follows the same unidirectional flow — `View → Interactor (business logic) → Worker (I/O) → Interactor → Presenter (formatting) → View` — with a `SceneBuilder` wiring the stack together and a `Router` handling navigation between Scenes. Interactors and Presenters are `@MainActor`-isolated, ensuring `@Published` mutations always occur on the main thread without manual `DispatchQueue.main` calls. `CustomLocation` owns its own `DeepLinkWorker` and "not installed" alert — it does not depend on the `LocationsList` Scene.
 
 ```
-┌─────────────────────────────────────────┐
-│              SwiftUI Views              │
-│ ContentView → LocationsListView         │
-│             → CustomLocationView (sheet)│
-└──────────────────┬──────────────────────┘
-                   │  @StateObject / @ObservedObject
-┌──────────────────▼──────────────────────┐
-│               ViewModels                │
-│  LocationsListViewModel  (@MainActor)   │
-│  CustomLocationViewModel (@MainActor)   │
-└──────┬─────────────────────┬────────────┘
-       │                     │
-┌──────▼────────┐   ┌────────▼───────────────┐
-│  Networking   │   │  DeepLink Service      │
-│ NetworkService│   │  WikipediaOpener       │
-│LocationService│   │  WikipediaDeepLink     │
-└───────────────┘   └────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│                        SwiftUI Views                       │
+│  ContentView → LocationsListView                           │
+│              → CustomLocationView (sheet, via Router)      │
+└───────────────────────┬─────────────────────┬──────────────┘
+        request         │                     │  request
+┌───────────────────────▼───────┐   ┌─────────▼─────────────────────┐
+│     LocationsList Scene       │   │      CustomLocation Scene     │
+│  Interactor  (@MainActor)     │   │  Interactor  (@MainActor)     │
+│  Presenter   (@MainActor,     │   │  Presenter   (@MainActor,     │
+│              ObservableObject)│   │              ObservableObject)│
+│  Router → CustomLocationScene │   │  (no Router — no child scenes)│
+└──────┬─────────────────┬──────┘   └───────────────┬───────────────┘
+       │                 │                          │
+┌──────▼────────┐ ┌──────▼──────────┐      ┌────────▼──────────┐
+│   Workers     │ │  Workers        │      │  Workers          │
+│LocationsWorker│ │DeepLinkWorker   │◄─────┤ DeepLinkWorker    │
+└──────┬────────┘ └─────────────────┘      └───────────────────┘
+       │
+┌──────▼────────┐
+│  Networking   │
+│ NetworkService│
+└───────────────┘
    ▲                                    ▲
-   └──────── DependencyInjector ────────┘
+   └──────────── DependencyInjector ────┘
+      (vends Workers to SceneBuilders)
 ```
 
 ## Project Structure
@@ -85,54 +92,69 @@ The app follows **MVVM** with a protocol-oriented dependency injection layer. Al
 ```
 WikiPlacesApp/
 ├── WikiPlacesApp/
-│   ├── WikiPlacesAppApp.swift              # App entry point (@MainActor)
+│   ├── WikiPlacesAppApp.swift              # App entry point (@MainActor) — builds the LocationsList scene via SceneBuilder
 │   ├── DI/
-│   │   └── DependencyInjector.swift        # Factory — all dependencies wired here; toggle useLocalData to switch data source
+│   │   └── DependencyInjector.swift        # Factory — vends Workers to SceneBuilders; toggle useLocalData to switch data source
 │   ├── Models/
 │   │   └── Location.swift                  # Identifiable, Equatable, Decodable
 │   ├── Networking/
-│   │   ├── NetworkService.swift            # Generic URLSession wrapper
-│   │   └── LocationServiceImp.swift        # LocationServiceImp (remote) + LocalLocationService (bundled JSON)
+│   │   └── NetworkService.swift            # Generic URLSession wrapper (transport-layer infra used by LocationsWorker)
 │   ├── Services/
 │   │   └── DeepLink/
 │   │       ├── DLConfiguration.swift       # WikipediaConfig constants
-│   │       ├── DLBuilder.swift             # WikipediaDeepLink — URL builder
-│   │       └── DLOpener.swift              # WikipediaOpener — UIApplication bridge
-│   ├── ViewModels/
-│   │   ├── LocationsListViewModel.swift    # List state machine + open action
-│   │   └── CustomLocationViewModel.swift   # Field validation for custom coordinates
-│   └── Views/
-│       ├── ContentView.swift               # Root view — nav stack, sheet, alert
-│       ├── LocationList/
-│       │   ├── LocationsListView.swift     # Scroll container + .task loader
-│       │   ├── ListContentView.swift       # State-driven switch (loading/loaded/error/empty)
-│       │   ├── LocationCard.swift          # LocationCard (right→left slide-in, stagger, tap depth animation) + LocationCardSkeleton (shimmer)
-│       │   └── StatusView.swift            # Reusable error/empty state view
-│       ├── CustomLocation/
-│       │   └── CustomLocationView.swift    # Form sheet for custom lat/lon entry
-│       └── SupportingView/
-│           ├── BackgroundGradient.swift
-│           ├── PressableButtonStyle.swift  # Scale + opacity press feedback
-│           └── ShakeEffect.swift           # GeometryEffect for validation shake
+│   │       └── DLBuilder.swift             # WikipediaDeepLink — URL builder
+│   ├── Workers/
+│   │   ├── LocationsWorker.swift           # LocationsWorker (remote) + LocalLocationsWorker (bundled JSON)
+│   │   └── DeepLinkWorker.swift            # DeepLinkWorker — UIApplication bridge
+│   ├── Scenes/
+│   │   ├── LocationsList/
+│   │   │   ├── LocationsListModels.swift       # LocationsListState + Load/OpenLocation Request-Response
+│   │   │   ├── LocationsListInteractor.swift   # Business logic — fetch/retry/refresh phase machine, open action
+│   │   │   ├── LocationsListPresenter.swift    # ObservableObject — formats Responses into published state
+│   │   │   ├── LocationsListRouter.swift       # Routes to the CustomLocation scene
+│   │   │   ├── LocationsListSceneBuilder.swift # Wires Interactor + Presenter + Router
+│   │   │   ├── LocationsListView.swift         # Scroll container + .task loader
+│   │   │   └── Components/
+│   │   │       ├── ListContentView.swift       # State-driven switch (loading/loaded/error/empty)
+│   │   │       ├── LocationCard.swift          # LocationCard (right→left slide-in, stagger, tap depth animation) + LocationCardSkeleton (shimmer)
+│   │   │       └── StatusView.swift            # Reusable error/empty state view
+│   │   └── CustomLocation/
+│   │       ├── CustomLocationModels.swift      # Validate/Open Request-Response
+│   │       ├── CustomLocationInteractor.swift  # Business logic — coordinate validation, deep-link opening
+│   │       ├── CustomLocationPresenter.swift   # ObservableObject — formats field errors + alert state
+│   │       ├── CustomLocationSceneBuilder.swift# Wires Interactor + Presenter (no Router — no child scenes)
+│   │       └── CustomLocationView.swift        # Form sheet for custom lat/lon entry, owns its own alert
+│   ├── Root/
+│   │   └── ContentView.swift               # Root view — nav stack, sheet (via Router), alert
+│   ├── SharedUI/
+│   │   ├── BackgroundGradient.swift
+│   │   ├── PressableButtonStyle.swift      # Scale + opacity press feedback
+│   │   └── ShakeEffect.swift               # GeometryEffect for validation shake
 │   └── SupportingFiles/
 │       └── LocalTestJSON/
-│           └── locations.json              # Bundled fallback data used by LocalLocationService
+│           └── locations.json              # Bundled fallback data used by LocalLocationsWorker
 ├── WikiPlacesAppTests/                     # Unit test target
 │   ├── DI/
 │   │   └── DependencyInjectorTests.swift
 │   ├── Models/
 │   │   └── LocationTests.swift
 │   ├── Networking/
-│   │   ├── NetworkServiceTests.swift
-│   │   └── LocationServiceImpTests.swift
+│   │   └── NetworkServiceTests.swift
 │   ├── Services/
 │   │   └── DLBuilderTests.swift
-│   ├── ViewModels/
-│   │   ├── LocationsListViewModelTests.swift
-│   │   └── CustomLocationViewModelTests.swift
+│   ├── Workers/
+│   │   ├── LocationsWorkerTests.swift
+│   │   └── DeepLinkWorkerTests.swift
+│   ├── Scenes/
+│   │   ├── LocationsList/
+│   │   │   ├── LocationsListInteractorTests.swift  # Phase-guard semantics, fetch/retry/refresh, open outcomes (spy Presenter)
+│   │   │   └── LocationsListPresenterTests.swift   # Response → published state formatting
+│   │   └── CustomLocation/
+│   │       ├── CustomLocationInteractorTests.swift # Validation rules, boundary values, open() using validatedLocation
+│   │       └── CustomLocationPresenterTests.swift  # Response → published error/alert formatting
 │   └── Mocks.swift
 └── WikiPlacesAppUITests/                   # UI test target
-    └── Views/
+    └── ViewModels/
         ├── LocationsListViewUITests.swift
         └── CustomLocationViewUITests.swift
 ```
@@ -157,11 +179,14 @@ Run with `⌘U` (or select the `WikiPlacesAppTests` scheme).
 |---|---|---|
 | Models | `LocationTests.swift` | `displayName` fallback, `coordinateString` format, Decodable (`lat`/`long` keys), Equatable |
 | Networking | `NetworkServiceTests.swift` | Successful decode, HTTP error → `invalidResponse`, malformed JSON → `decodingError`, cache policy, `URLError` passthrough |
-| Networking | `LocationServiceImpTests.swift` | Fetch success, service-level error, call counts, default and custom endpoint URL |
+| Workers | `LocationsWorkerTests.swift` | Fetch success, worker-level error, call counts, default and custom endpoint URL |
+| Workers | `DeepLinkWorkerTests.swift` | Builder returns nil URL, unregistered scheme, correct location passed to the deep-link builder, repeated calls |
 | Services | `DLBuilderTests.swift` | Correct scheme/host, `lat`/`lon` query items, optional `name` inclusion and omission, query item ordering |
-| ViewModels | `LocationsListViewModelTests.swift` | All `LocationsListState` transitions (`idle → loading → loaded/error`), retry, refresh, open success/failure, `isShowingNotInstalledAlert` |
-| ViewModels | `CustomLocationViewModelTests.swift` | Boundary coordinate values, validation error messages, name whitespace trimming, re-validation after first failure |
-| DI | `DependencyInjectorTests.swift` | Factory returns correct concrete types, ViewModel starts in `.idle` state |
+| Scenes/LocationsList | `LocationsListInteractorTests.swift` | Phase-guard semantics (`idle → loading → loaded/error`), `loadIfNeeded`/`retry`/`refresh` fetch behavior, open success/failure reported to a spy Presenter |
+| Scenes/LocationsList | `LocationsListPresenterTests.swift` | `Response → LocationsListState` formatting, `isShowingNotInstalledAlert` never clears on success |
+| Scenes/CustomLocation | `CustomLocationInteractorTests.swift` | Boundary coordinate values, validation error messages, name whitespace trimming, re-validation after first failure, `open()` using the last `validatedLocation` |
+| Scenes/CustomLocation | `CustomLocationPresenterTests.swift` | `Response → latitudeError/longitudeError` formatting, `isValid` derivation, alert formatting |
+| DI | `DependencyInjectorTests.swift` | Factory returns non-nil Workers for both `makeLocationsWorker()` and `makeDeepLinkWorker()` |
 
 ### UI Tests — `WikiPlacesAppUITests`
 
@@ -176,8 +201,10 @@ Run with `⌘U` against the `WikiPlacesAppUITests` scheme.
 
 | Mock | Purpose |
 |---|---|
-| `MockLocationsService` | Stubs `fetchLocations()` with a configurable success or failure |
-| `MockWikiOpener` | Stubs `openDeepLink()`, records call count and last location passed |
+| `MockLocationsWorker` | Stubs `fetchLocations()` with a configurable success or failure |
+| `MockDeepLinkWorker` | Stubs `openDeepLink()`, records call count and last location passed |
+| `MockLocationsListPresenter` | Spy conforming to `LocationsListPresentationLogic` — records every `presentLoading`/`presentLoad`/`presentOpenResult` call for Interactor tests |
+| `MockCustomLocationPresenter` | Spy conforming to `CustomLocationPresentationLogic` — records every `presentValidation`/`presentOpenResult` call for Interactor tests |
 | `MockNetworkService` | Generic `fetch<T>()` stub using `Any` result casting |
 | `MockURLProtocol` | Intercepts `URLSession` requests for `NetworkService` integration tests |
 
