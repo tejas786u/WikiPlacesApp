@@ -14,17 +14,21 @@ final class DependencyInjector {
 
     // MARK: - Dependencies
     private let networkService: NetworkServiceProtocol = NetworkService()
-    private lazy var locationService: LocationRepositoryProtocol = {
+    private lazy var locationsWorker: LocationsWorkerProtocol = {
         if self.useLocalData {
-            return LocalLocationService() as LocationRepositoryProtocol
+            return LocalLocationsWorker() as LocationsWorkerProtocol
         } else {
-            return LocationServiceImp(networkService: networkService) as LocationRepositoryProtocol
+            return LocationsWorker(networkService: networkService) as LocationsWorkerProtocol
         }
     }()
-    private lazy var wikiOpener: DeepLinkOpenerProtocol = WikipediaOpener(deepLink: WikipediaDeepLink())
+    private lazy var deepLinkWorker: DeepLinkWorkerProtocol = DeepLinkWorker(deepLink: WikipediaDeepLink())
 
     // MARK: - Factory
-    func makeLocationsViewModel() -> LocationsListViewModel {
-        LocationsListViewModel(locationService: locationService, wikiOpener: wikiOpener)
+    func makeLocationsWorker() -> LocationsWorkerProtocol {
+        locationsWorker
+    }
+
+    func makeDeepLinkWorker() -> DeepLinkWorkerProtocol {
+        deepLinkWorker
     }
 }

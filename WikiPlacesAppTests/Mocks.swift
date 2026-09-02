@@ -9,9 +9,9 @@ import XCTest
 import Foundation
 @testable import WikiPlacesApp
 
-// MARK: - MockLocationsService
+// MARK: - MockLocationsWorker
 
-final class MockLocationsService: LocationRepositoryProtocol {
+final class MockLocationsWorker: LocationsWorkerProtocol {
     enum Result {
         case success([Location])
         case failure(Error)
@@ -31,10 +31,10 @@ final class MockLocationsService: LocationRepositoryProtocol {
     }
 }
 
-// MARK: - MockWikiOpener
+// MARK: - MockDeepLinkWorker
 
 @MainActor
-final class MockWikiOpener: DeepLinkOpenerProtocol {
+final class MockDeepLinkWorker: DeepLinkWorkerProtocol {
     var shouldSucceed = true
     private(set) var openCallCount = 0
     private(set) var lastOpenedLocation: Location?
@@ -43,6 +43,43 @@ final class MockWikiOpener: DeepLinkOpenerProtocol {
         openCallCount += 1
         lastOpenedLocation = location
         return shouldSucceed
+    }
+}
+
+// MARK: - MockLocationsListPresenter (spy)
+
+@MainActor
+final class MockLocationsListPresenter: LocationsListPresentationLogic {
+    private(set) var presentLoadingCallCount = 0
+    private(set) var loadResponses: [LocationsList.Load.Response] = []
+    private(set) var openResponses: [LocationsList.OpenLocation.Response] = []
+
+    func presentLoading() {
+        presentLoadingCallCount += 1
+    }
+
+    func presentLoad(response: LocationsList.Load.Response) {
+        loadResponses.append(response)
+    }
+
+    func presentOpenResult(response: LocationsList.OpenLocation.Response) {
+        openResponses.append(response)
+    }
+}
+
+// MARK: - MockCustomLocationPresenter (spy)
+
+@MainActor
+final class MockCustomLocationPresenter: CustomLocationPresentationLogic {
+    private(set) var validationResponses: [CustomLocation.Validate.Response] = []
+    private(set) var openResponses: [CustomLocation.Open.Response] = []
+
+    func presentValidation(response: CustomLocation.Validate.Response) {
+        validationResponses.append(response)
+    }
+
+    func presentOpenResult(response: CustomLocation.Open.Response) {
+        openResponses.append(response)
     }
 }
 
