@@ -11,7 +11,6 @@ import Foundation
 protocol LocationsListBusinessLogic {
     func loadIfNeeded() async
     func retry() async
-    func refresh() async
     func open(location: Location) async
 }
 
@@ -50,10 +49,6 @@ final class LocationsListInteractor: LocationsListBusinessLogic, LocationsListDa
     }
 
     func retry() async {
-        await performFetch()
-    }
-
-    func refresh() async {
         await performFetch()
     }
 

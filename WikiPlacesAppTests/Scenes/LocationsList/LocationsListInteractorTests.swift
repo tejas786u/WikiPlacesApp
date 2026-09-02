@@ -167,7 +167,7 @@ final class LocationsListInteractorTests: XCTestCase {
         let (sut, worker, _, _) = makeSUT(workerResult: .success(makeLocations()))
 
         await sut.loadIfNeeded() // phase becomes .loaded
-        await sut.refresh()      // should still fetch
+        await sut.retry()      // should still fetch
 
         XCTAssertEqual(worker.fetchCallCount, 2)
     }
@@ -183,7 +183,7 @@ final class LocationsListInteractorTests: XCTestCase {
         await sut.loadIfNeeded()
 
         worker.result = .success(makeLocations(count: 3))
-        await sut.refresh()
+        await sut.retry()
 
         guard case .success(let result) = presenter.loadResponses.last?.result else {
             return XCTFail("Expected a success response after refresh")
@@ -195,7 +195,7 @@ final class LocationsListInteractorTests: XCTestCase {
     func testRefresh_OnFailure_PresentsError() async {
         let (sut, _, _, presenter) = makeSUT(workerResult: .failure(NetworkError.invalidResponse))
 
-        await sut.refresh()
+        await sut.retry()
 
         guard case .failure = presenter.loadResponses.last?.result else {
             return XCTFail("Expected a failure response after failing refresh")
@@ -209,7 +209,7 @@ final class LocationsListInteractorTests: XCTestCase {
 
         await sut.loadIfNeeded()
         await sut.retry()
-        await sut.refresh()
+        await sut.retry()
 
         // loadIfNeeded (1) + retry (1) + refresh (1)
         XCTAssertEqual(worker.fetchCallCount, 3)
