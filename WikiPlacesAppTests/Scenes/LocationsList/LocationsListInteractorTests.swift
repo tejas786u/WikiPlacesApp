@@ -169,8 +169,8 @@ final class LocationsListInteractorTests: XCTestCase {
         await sut.loadIfNeeded()
         await sut.retry()
 
-        // loadIfNeeded (1) + retry (1) + refresh (1)
-        XCTAssertEqual(worker.fetchCallCount, 3)
+        // loadIfNeeded (1) + retry (1)
+        XCTAssertEqual(worker.fetchCallCount, 2)
     }
 
     // MARK: - open
